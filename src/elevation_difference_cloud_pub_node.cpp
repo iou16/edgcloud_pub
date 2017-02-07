@@ -45,7 +45,7 @@ AccumulateScanNode::AccumulateScanNode()
     map_ = map_alloc();
     map_->size_x = 600;
     map_->size_y = 600;
-    map_->scale = 0.05;
+    map_->scale = 0.1;
     map_->origin_x = 0.0;
     map_->origin_y = 0.0;
     map_->cells = (map_cell_t*)malloc(sizeof(map_cell_t)*map_->size_x*map_->size_y);
@@ -55,7 +55,7 @@ AccumulateScanNode::AccumulateScanNode()
     cloud_sub_ = nh.subscribe<sensor_msgs::PointCloud2>(std::string("/hokuyo3d/hokuyo_cloud2"), 100, &AccumulateScanNode::cloudCallback, this);
     elevation_difference_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/elevation_difference_cloud", 100, false);
     accumulate_scan_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/accumulate_scan_cloud", 100, false);
-    cloud_pub_interval_.fromSec(0.1);
+    cloud_pub_interval_.fromSec(0.05);
 }
 
 AccumulateScanNode::~AccumulateScanNode()
@@ -131,7 +131,7 @@ void AccumulateScanNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& sc
       pcl_cloud->points.clear();
       for(int i = 0; i < map_->size_x; i++) {
         for(int j = 0; j < map_->size_y; j++) {
-          // if(0.03 > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
+          if(0.03 > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
           if(!(map_->cells[MAP_INDEX(map_, i, j)].diff)) continue;
           pcl::PointXYZ pcl_point;
           pcl_point.x = MAP_WXGX(map_, i);
@@ -183,8 +183,8 @@ void AccumulateScanNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr&
       cloud_msg.points.clear();
       for(int i = 0; i < map_->size_x; i++) {
         for(int j = 0; j < map_->size_y; j++) {
-          // if(0.03 > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
           if(!(map_->cells[MAP_INDEX(map_, i, j)].diff)) continue;
+          if(0.03 > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
           geometry_msgs::Point32 point;
           point.x = MAP_WXGX(map_, i);
           point.y = MAP_WXGX(map_, j);
