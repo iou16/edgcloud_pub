@@ -46,8 +46,8 @@ void map_updata_cell(map_t *map, double gx, double gy, double data)
     map->cells[MAP_INDEX(map,mi,mj)].min = data;
     map->cells[MAP_INDEX(map,mi,mj)].max = data;
   } else {
-    map->cells[MAP_INDEX(map,mi,mj)].min = (map->cells[MAP_INDEX(map,mi,mj)].min >= data) ? data: map->cells[MAP_INDEX(map,mi,mj)].min;
-    map->cells[MAP_INDEX(map,mi,mj)].max = (map->cells[MAP_INDEX(map,mi,mj)].max <= data) ? data: map->cells[MAP_INDEX(map,mi,mj)].max;
+    map->cells[MAP_INDEX(map,mi,mj)].min = (map->cells[MAP_INDEX(map,mi,mj)].min > data) ? data: map->cells[MAP_INDEX(map,mi,mj)].min;
+    map->cells[MAP_INDEX(map,mi,mj)].max = (map->cells[MAP_INDEX(map,mi,mj)].max < data) ? data: map->cells[MAP_INDEX(map,mi,mj)].max;
   }
   map->cells[MAP_INDEX(map,mi,mj)].diff = map->cells[MAP_INDEX(map,mi,mj)].max - map->cells[MAP_INDEX(map,mi,mj)].min;
 }
