@@ -119,7 +119,7 @@ void AccumulateScanNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& sc
                                cloud2_v_.at(i).header.frame_id,
                                cloud2_v_.at(i).header.stamp,
                                fixed_frame_id_,
-                               ros::Duration(0.5));
+                               ros::Duration(1.0));
 
           tf_.lookupTransform(target_frame_id_,
                               scan->header.stamp,
