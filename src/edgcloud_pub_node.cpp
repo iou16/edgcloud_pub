@@ -14,17 +14,17 @@
 using namespace std;
 
 
-class AccumulateScanNode
+class EDGCloudPubNode
 {
     public:
-        AccumulateScanNode();
-        ~AccumulateScanNode();
+        EDGCloudPubNode();
+        ~EDGCloudPubNode();
 
     private:
         ros::Subscriber scan_sub_;
         ros::Subscriber cloud_sub_;
         ros::Publisher  accumulate_scan_cloud_pub_;
-        ros::Publisher  elevation_difference_cloud_pub_;
+        ros::Publisher  edgcloud_pub_;
 
         std::string target_frame_id_, fixed_frame_id_;
 
@@ -34,7 +34,7 @@ class AccumulateScanNode
         map_t* map_;
         int map_size_x_, map_size_y_;
         double cell_scale_, map_origin_x_, map_origin_y_;
-        double elevation_difference_threshold_;
+        double edgthreshold_;
 
         ros::Duration cloud_pub_interval_;
         std::vector<sensor_msgs::PointCloud2> cloud2_v_;
@@ -47,7 +47,7 @@ class AccumulateScanNode
 };
 
 
-AccumulateScanNode::AccumulateScanNode()
+EDGCloudPubNode::EDGCloudPubNode()
 {
   ros::NodeHandle private_nh("~");
   private_nh.param("map_size_x", map_size_x_, 600);
@@ -55,7 +55,7 @@ AccumulateScanNode::AccumulateScanNode()
   private_nh.param("cell_scale", cell_scale_, 0.1);
   private_nh.param("map_origin_x", map_origin_x_, 0.0);
   private_nh.param("map_origin_y", map_origin_y_, 0.0);
-  private_nh.param("elevation_difference_threshold", elevation_difference_threshold_, 0.03);
+  private_nh.param("edgthreshold", edgthreshold_, 0.03);
 
   private_nh.param("target_frame_id", target_frame_id_, std::string("/base_link"));
   private_nh.param("fixed_frame_id", fixed_frame_id_, std::string("/odom"));
@@ -75,20 +75,20 @@ AccumulateScanNode::AccumulateScanNode()
   map_->cells = (map_cell_t*)malloc(sizeof(map_cell_t)*map_->size_x*map_->size_y);
 
   ros::NodeHandle nh;
-  scan_sub_ = nh.subscribe<sensor_msgs::LaserScan>("/diag_scan", 100, &AccumulateScanNode::scanCallback, this);
-  cloud_sub_ = nh.subscribe<sensor_msgs::PointCloud2>(std::string("/hokuyo3d/hokuyo_cloud2"), 100, &AccumulateScanNode::cloudCallback, this);
-  elevation_difference_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/elevation_difference_cloud", 100, false);
+  scan_sub_ = nh.subscribe<sensor_msgs::LaserScan>("/diag_scan", 100, &EDGCloudPubNode::scanCallback, this);
+  cloud_sub_ = nh.subscribe<sensor_msgs::PointCloud2>(std::string("/hokuyo3d/hokuyo_cloud2"), 100, &EDGCloudPubNode::cloudCallback, this);
+  edgcloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/edgcloud", 100, false);
   accumulate_scan_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/accumulate_scan_cloud", 100, false);
 }
 
-AccumulateScanNode::~AccumulateScanNode()
+EDGCloudPubNode::~EDGCloudPubNode()
 {
     map_free(map_);
     map_ = NULL;
 
 }
 
-sensor_msgs::PointCloud2 AccumulateScanNode::getScanCloud(const sensor_msgs::LaserScan& scan)
+sensor_msgs::PointCloud2 EDGCloudPubNode::getScanCloud(const sensor_msgs::LaserScan& scan)
 {
   sensor_msgs::PointCloud2 scan_cloud2;
   projector_.projectLaser(scan, scan_cloud2);
@@ -96,7 +96,7 @@ sensor_msgs::PointCloud2 AccumulateScanNode::getScanCloud(const sensor_msgs::Las
   return scan_cloud2;
 }
 
-void AccumulateScanNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
+void EDGCloudPubNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
     static ros::Time last_cloud_pub(0,0);
 
@@ -154,7 +154,7 @@ void AccumulateScanNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& sc
       pcl_cloud->points.clear();
       for(int i = 0; i < map_->size_x; i++) {
         for(int j = 0; j < map_->size_y; j++) {
-          if(elevation_difference_threshold_ > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
+          if(edgthreshold_ > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
           pcl::PointXYZ pcl_point;
           pcl_point.x = MAP_WXGX(map_, i);
           pcl_point.y = MAP_WXGX(map_, j);
@@ -167,7 +167,7 @@ void AccumulateScanNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& sc
 
       cloud2_msg.header.frame_id = target_frame_id_;
       cloud2_msg.header.stamp = scan->header.stamp;
-      elevation_difference_cloud_pub_.publish(cloud2_msg);
+      edgcloud_pub_.publish(cloud2_msg);
 
       last_cloud_pub = scan->header.stamp;
     }
@@ -177,7 +177,7 @@ void AccumulateScanNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& sc
     }
 }
 
-void AccumulateScanNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
+void EDGCloudPubNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
 {
   static ros::Time last_cloud_pub(cloud->header.stamp);
 
@@ -208,7 +208,7 @@ void AccumulateScanNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr&
     cloud_msg.points.clear();
     for(int i = 0; i < map_->size_x; i++) {
       for(int j = 0; j < map_->size_y; j++) {
-        if(elevation_difference_threshold_ > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
+        if(edgthreshold_ > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
         geometry_msgs::Point32 point;
         point.x = MAP_WXGX(map_, i);
         point.y = MAP_WXGX(map_, j);
@@ -222,7 +222,7 @@ void AccumulateScanNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr&
     sensor_msgs::convertPointCloudToPointCloud2(cloud_msg, cloud2_msg);
     cloud2_msg.header.frame_id = target_frame_id_;
     cloud2_msg.header.stamp = cloud->header.stamp;
-    elevation_difference_cloud_pub_.publish(cloud2_msg);
+    edgcloud_pub_.publish(cloud2_msg);
 
     last_cloud_pub = cloud->header.stamp;
   }
@@ -231,8 +231,8 @@ void AccumulateScanNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr&
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "accumulate_scan_node");
-    AccumulateScanNode asn;
+    ros::init(argc, argv, "edgcloud_pub_node");
+    EDGCloudPubNode edg_cloud_pub;
 
     ros::spin();
     return 0;

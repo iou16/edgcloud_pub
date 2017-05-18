@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(elevation_difference_cloud_pub)
+project(edgcloud_pub)
 
 set(CMAKE_CXX_FLAGS "-march=native -O2 -std=c++11 -fopenmp")
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS   "-march=native -O2 -fopenmp")
@@ -26,33 +26,33 @@ catkin_package(CATKIN_DEPENDS
         pcl_msgs
         laser_geometry
   INCLUDE_DIRS include
-  LIBRARIES elevation_difference_cloud_pub
+  LIBRARIES edgcloud_pub
 )
 
-include_directories(include/elevation_difference_cloud_pub include/elevation_difference_cloud_pub/map)
+include_directories(include/edgcloud_pub include/edgcloud_pub/map)
 include_directories(${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
-add_library(elevation_difference_cloud_pub_map
-                    src/elevation_difference_cloud_pub/map/map.c)
-target_link_libraries(elevation_difference_cloud_pub_map)
+add_library(edgcloud_pub_map
+                    src/edgcloud_pub/map/map.c)
+target_link_libraries(edgcloud_pub_map)
 
 
-add_executable(elevation_difference_cloud_pub
-                       src/elevation_difference_cloud_pub_node.cpp)
+add_executable(edgcloud_pub
+                       src/edgcloud_pub_node.cpp)
 
-target_link_libraries(elevation_difference_cloud_pub
-    elevation_difference_cloud_pub_map
+target_link_libraries(edgcloud_pub
+    edgcloud_pub_map
     ${Boost_LIBRARIES}
     ${catkin_LIBRARIES}
 )
 
 install( TARGETS
-    elevation_difference_cloud_pub elevation_difference_cloud_pub_map
+    edgcloud_pub edgcloud_pub_map
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-install(DIRECTORY include/elevation_difference_cloud_pub/
+install(DIRECTORY include/edgcloud_pub/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )

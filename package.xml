@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>elevation_difference_cloud_pub</name>
+  <name>edgcloud_pub</name>
   <version>0.0.0</version>
   <description>The elevation_difference_cloud_pub package</description>
 
