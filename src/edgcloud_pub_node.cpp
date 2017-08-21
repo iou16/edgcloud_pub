@@ -55,7 +55,7 @@ EDGCloudPubNode::EDGCloudPubNode()
   private_nh.param("cell_scale", cell_scale_, 0.1);
   private_nh.param("map_origin_x", map_origin_x_, 0.0);
   private_nh.param("map_origin_y", map_origin_y_, 0.0);
-  private_nh.param("edgthreshold", edgthreshold_, 0.03);
+  private_nh.param("edgthreshold", edgthreshold_, 0.05);
 
   private_nh.param("target_frame_id", target_frame_id_, std::string("/base_link"));
   private_nh.param("fixed_frame_id", fixed_frame_id_, std::string("/odom"));
@@ -179,6 +179,12 @@ void EDGCloudPubNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 
 void EDGCloudPubNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
 {
+  ros::Time start = ros::Time::now();
+  static unsigned int step_num = 0;
+  static double add_time = 0.0;
+  static double add_size = 0.0;
+
+
   static ros::Time last_cloud_pub(cloud->header.stamp);
 
   if ((cloud->header.stamp - last_cloud_pub) > cloud_pub_interval_) {
@@ -210,12 +216,15 @@ void EDGCloudPubNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cl
       for(int j = 0; j < map_->size_y; j++) {
         if(edgthreshold_ > map_->cells[MAP_INDEX(map_, i, j)].diff) continue;
         geometry_msgs::Point32 point;
-        point.x = MAP_WXGX(map_, i);
-        point.y = MAP_WXGX(map_, j);
+        point.x = MAP_WXGX(map_, i) + map_->scale / 2;
+        point.y = MAP_WYGY(map_, j) + map_->scale / 2;
         point.z = map_->cells[MAP_INDEX(map_, i, j)].diff;
         cloud_msg.points.push_back(point);
       }
     }
+    add_size += cloud_msg.points.size();
+    step_num++;
+    ROS_INFO_STREAM("edgcloud size: " << (add_size/(double)step_num));
 
     sensor_msgs::PointCloud2 cloud2_msg;
     cloud2_msg.data.clear();
@@ -226,6 +235,11 @@ void EDGCloudPubNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cl
 
     last_cloud_pub = cloud->header.stamp;
   }
+
+  double time = ros::Time::now().toSec() - start.toSec();
+  // ROS_INFO_STREAM("time: " << time << " ");
+  add_time += time;
+  ROS_INFO_STREAM("ave_time: " << (add_time/(double)step_num));
 }
 
 
