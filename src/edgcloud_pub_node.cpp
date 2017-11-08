@@ -137,19 +137,23 @@ void EDGCloudPubNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 
   cloud2_v_.push_back(getScanCloud(*scan));
 
+  if (cloud2_v_.size() > cloud2_v_size_) {
+    cloud2_v_.erase(cloud2_v_.begin());
+  }
+
   if ((scan->header.stamp - last_cloud_pub) < cloud_pub_interval_) return;
 
-  sensor_msgs::PointCloud2 cloud2_msg;
-  cloud2_msg.data.clear();
+  sensor_msgs::PointCloud2 tmp_cloud2;
+  tmp_cloud2.data.clear();
   for (int i=0; i < cloud2_v_.size(); i++) {
     tf::StampedTransform transform;
     try {
-      tf_.waitForTransform(target_frame_id_, 
-                           scan->header.stamp,
-                           cloud2_v_.at(i).header.frame_id,
-                           cloud2_v_.at(i).header.stamp,
-                           fixed_frame_id_,
-                           ros::Duration(0.5));
+      // tf_.waitForTransform(target_frame_id_, 
+      //                      scan->header.stamp,
+      //                      cloud2_v_.at(i).header.frame_id,
+      //                      cloud2_v_.at(i).header.stamp,
+      //                      fixed_frame_id_,
+      //                      ros::Duration(0.5));
 
       tf_.lookupTransform(target_frame_id_,
                           scan->header.stamp,
@@ -171,24 +175,19 @@ void EDGCloudPubNode::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     }
     sensor_msgs::PointCloud2 transformed_cloud2;
     toROSMsg (*pcl_cloud, transformed_cloud2);
-    pcl::concatenatePointCloud(cloud2_msg, transformed_cloud2, cloud2_msg);
+    pcl::concatenatePointCloud(tmp_cloud2, transformed_cloud2, tmp_cloud2);
   }
 
-  cloud2_msg.header.frame_id = target_frame_id_;
-  cloud2_msg.header.stamp = scan->header.stamp;
-  accumulate_scan_cloud_pub_.publish(cloud2_msg);
+  tmp_cloud2.header.frame_id = target_frame_id_;
+  tmp_cloud2.header.stamp = scan->header.stamp;
+  accumulate_scan_cloud_pub_.publish(tmp_cloud2);
 
-  sensor_msgs::convertPointCloudToPointCloud2(getEDGCloud(), cloud2_msg);
-  cloud2_msg.header.frame_id = target_frame_id_;
-  cloud2_msg.header.stamp = scan->header.stamp;
-  edgcloud_pub_.publish(cloud2_msg);
+  sensor_msgs::convertPointCloudToPointCloud2(getEDGCloud(), tmp_cloud2);
+  tmp_cloud2.header.frame_id = target_frame_id_;
+  tmp_cloud2.header.stamp = scan->header.stamp;
+  edgcloud_pub_.publish(tmp_cloud2);
 
   last_cloud_pub = scan->header.stamp;
-  
-
-  if (cloud2_v_.size() > cloud2_v_size_) {
-    cloud2_v_.erase(cloud2_v_.begin());
-  }
 }
 
 void EDGCloudPubNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud)
@@ -202,26 +201,24 @@ void EDGCloudPubNode::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cl
 
   if ((cloud->header.stamp - last_cloud_pub) < cloud_pub_interval_) return;
 
-  sensor_msgs::PointCloud2 transformed_cloud2;
+  sensor_msgs::PointCloud2 tmp_cloud2;
   try {
-    pcl_ros::transformPointCloud(target_frame_id_, *cloud, transformed_cloud2, tf_);
+    pcl_ros::transformPointCloud(target_frame_id_, *cloud, tmp_cloud2, tf_);
   } catch(tf::TransformException e) {
     ROS_WARN("Failed transformPointCloud (%s)", e.what());
-    last_cloud_pub = cloud->header.stamp;
     return;
   }
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::fromROSMsg(transformed_cloud2, *pcl_cloud);
+  pcl::fromROSMsg(tmp_cloud2, *pcl_cloud);
   for (int j=0; j<pcl_cloud->points.size(); j++) {
     map_updata_cell(map_, pcl_cloud->points.at(j).x, pcl_cloud->points.at(j).y, pcl_cloud->points.at(j).z);
   }
 
-  sensor_msgs::PointCloud2 cloud2_msg;
-  sensor_msgs::convertPointCloudToPointCloud2(getEDGCloud(), cloud2_msg);
-  cloud2_msg.header.frame_id = target_frame_id_;
-  cloud2_msg.header.stamp = cloud->header.stamp;
-  edgcloud_pub_.publish(cloud2_msg);
+  sensor_msgs::convertPointCloudToPointCloud2(getEDGCloud(), tmp_cloud2);
+  tmp_cloud2.header.frame_id = target_frame_id_;
+  tmp_cloud2.header.stamp = cloud->header.stamp;
+  edgcloud_pub_.publish(tmp_cloud2);
 
   last_cloud_pub = cloud->header.stamp;
 
