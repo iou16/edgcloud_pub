@@ -10,7 +10,8 @@ extern "C" {
   
 typedef struct
 {
-  double min, max, diff;
+  double min, max, sum_x, sum_y;
+  int visit;
 } map_cell_t;
 
 typedef struct
